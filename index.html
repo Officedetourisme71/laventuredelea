@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Journées Européennes du Patrimoine - Jeu de Piste</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <style>
+    body {
+      background: linear-gradient(to bottom right, #0055a4, #ffd700);
+      font-family: 'Arial', sans-serif;
+    }
+    .card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    }
+    #map {
+      height: 400px;
+    }
+    .progress-bar {
+      height: 8px;
+      background-color: #e5e7eb;
+      border-radius: 9999px;
+      overflow: hidden;
+      margin-top: 0.5rem;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0;
+      background-color: #ffd700;
+      transition: width 0.3s linear;
+    }
+    footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+  </style>
+</head>
+<body class="text-white min-h-screen flex flex-col">
+
+  <!-- En-tête -->
+  <header class="text-center py-6 px-4">
+    <h1 class="text-3xl md:text-4xl font-extrabold">Journées Européennes du Patrimoine, sur les traces des ancêtres de Léa</h1>
+    <p class="text-base md:text-lg mt-2">à travers une balade audio de 4.7km, 
+découvrez les secrets de nos villages 🎧</p>
+  </header>
+
+  <!-- Contenu principal -->
+  <div class="flex flex-col lg:flex-row flex-1 w-full max-w-7xl mx-auto px-4 gap-6">
+
+    <!-- Colonne gauche : Carte -->
+    <aside class="lg:w-1/3 bg-white rounded-2xl shadow-md p-4 text-gray-900 h-fit sticky top-6">
+  <h2 class="text-xl font-semibold mb-4">Plan du parcours</h2>
+  <div id="map" class="rounded-lg shadow-md"></div>
+</aside>
+
+    <!-- Colonne droite : Étapes audio -->
+    <section class="lg:w-2/3 flex flex-col">
+      <main id="etapes" class="grid grid-cols-1 md:grid-cols-2 gap-6 pb-12 w-full"></main>
+    </section>
+
+  </div>
+
+  <!-- Pied de page -->
+ <footer class="bg-gray-900 text-gray-300 w-full py-6 px-6">
+  <!-- Contact -->
+  <div>
+    <h3 class="font-bold text-lg mb-2">Contact</h3>
+    <p>📞 <a href="tel:+33123456789" class="underline hover:text-yellow-400">01 23 45 67 89</a></p>
+  </div>
+  <!-- Logos -->
+  <div class="flex gap-6 flex-wrap justify-end">
+    <img src="logo1.png" alt="Logo 1" class="h-12 md:h-20">
+    <img src="logo2.png" alt="Logo 2" class="h-12 md:h-20">
+    <img src="logo3.png" alt="Logo 3" class="h-12 md:h-20">
+  </div>
+</footer>
+
+  <script>
+    // Étapes avec coordonnées GPS
+    const audios = [
+      { fichier: "indice1.mp3", titre: "Pour une bonne quête", coords: [46.214074, 4.255124] },
+      { fichier: "indice2.mp3", titre: "Le début de l'aventure", coords: [46.214074, 4.255124] },
+,
+      { fichier: "indice4.mp3", titre: "Une histoire chevaleresque", coords: [46.212159, 4.255637] },
+      { fichier: "indice5.mp3", titre: "Le deuxième ancêtre", coords: [46.212159, 4.255637] },
+      { fichier: "indice6.mp3", titre: "L'Église Romane", coords: [46.212364, 4.255125] },
+      { fichier: "indice7.mp3", titre: "Une enveloppe mysterieuse", coords: [46.212290, 4.254898] },
+      { fichier: "indice8.mp3", titre: "La croix blanche", coords: [46.214069, 4.255620] },
+      { fichier: "indice9.mp3", titre: "Un emplacement bien choisi", coords: [46.216911, 4.252969] },
+      { fichier: "indice10.mp3", titre: "Un mythe ? ", coords: [46.217832, 4.252098] },
+      { fichier: "indice11.mp3", titre: "L'église devenue chapelle", coords: [46.218209, 4.251943] },
+      { fichier: "indice12.mp3", titre: "Un cimetière fascinant", coords: [46.218149, 4.251747] },
+      { fichier: "indice13.mp3", titre: "Un cimetière particulier ", coords: [46.218149, 4.251747] },
+      { fichier: "indice14.mp3", titre: "Les bocages brionnais", coords: [46.218169, 4.251661] },
+      { fichier: "indice15.mp3", titre: "Des ragots", coords: [46.221122, 4.252746] },
+      { fichier: "indice16.mp3", titre: "Un grand four", coords: [46.222782, 4.243660] },
+      { fichier: "indice17.mp3", titre: " On fait le point ?", coords: [46.214129, 4.255208] }
+    ];
+
+    const etapes = document.getElementById("etapes");
+
+    // Génération des cartes audio
+    audios.forEach((audio, index) => {
+      const step = index + 1;
+
+      const card = document.createElement("div");
+      card.className = "card bg-white text-gray-900 rounded-2xl p-6 shadow-md";
+
+      card.innerHTML = `
+        <h2 class="text-lg md:text-xl font-semibold mb-2">Étape ${step} : ${audio.titre}</h2>
+        <audio id="audio${step}" controls class="w-full">
+          <source src="audio/${audio.fichier}" type="audio/mpeg">
+          Votre navigateur ne supporte pas la lecture audio.
+        </audio>
+        <div class="progress-bar"><div id="progress${step}" class="progress-fill"></div></div>
+      `;
+
+      etapes.appendChild(card);
+
+      // Gestion de la jauge de progression
+      const audioEl = card.querySelector(`#audio${step}`);
+      const progressFill = card.querySelector(`#progress${step}`);
+
+      audioEl.addEventListener("timeupdate", () => {
+        const pourcentage = (audioEl.currentTime / audioEl.duration) * 100;
+        progressFill.style.width = `${pourcentage}%`;
+      });
+
+      // Quand on clique sur le marqueur, on scroll jusqu'à l'audio correspondant
+      audio.scrollToCard = () => {
+        card.scrollIntoView({ behavior: "smooth" });
+        card.classList.add("ring-4", "ring-yellow-400");
+        setTimeout(() => card.classList.remove("ring-4", "ring-yellow-400"), 2000);
+      };
+    });
+
+    // Carte Leaflet
+    // Initialiser la carte Leaflet : centré sur Châteauneuf (71)
+const map = L.map("map").setView([46.2122, 4.25556], 14);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  attribution: "© OpenStreetMap"
+}).addTo(map);
+
+    // Ajout des marqueurs liés aux étapes
+    audios.forEach((audio, index) => {
+      const marker = L.marker(audio.coords).addTo(map);
+      marker.bindPopup(`<b>Étape ${index+1}</b><br>${audio.titre}`).on("click", audio.scrollToCard);
+    });
+  </script>
+</body>
+</html>
